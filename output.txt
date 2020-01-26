@@ -1,0 +1,3 @@
+var A0:float;
+var A2:float;
+constraint ((A0 == (A0*2))/\(length(A1) == A2));

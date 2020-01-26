@@ -1,10 +1,29 @@
 :- initialization(main).
 :- set_prolog_flag('double_quotes','chars').
-:- use_module(library(clpfd)).
+:- use_module(type_inference).
 
-main :- to_minizinc((length(L1,2),append(L1,L2,L3),B2 = B1 * (1.0 + I) - R,M is Z**2),Output),writeln(Output).
+main :- to_minizinc((B=B*2,length(L1,Z3),member(3,L1)), Output),
+		writeln(Output),
+		open('output.mzn',write,Stream),
+        write(Stream,Output),
+        nl(Stream),
+        close(Stream).
 
-to_minizinc(Term,Output) :- prolog_to_minizinc(Term,C),term_variables(C,Vars),vars_to_digits(0,Vars),C_=["constraint ",C,";"],append_all(C_,C1),atom_chars(Output,C1).
+types_to_vars([A],[]) :-
+	var(A).
+types_to_vars([(Var:Type)|Rest],[Var1|Rest1]) :-
+	type_to_var(Var:Type,Var1),
+	types_to_vars(Rest,Rest1).
+
+type_to_var(A:bool,["var bool:",A,";\n"]) :- nonvar(A).
+type_to_var(A:number,["var float:",A,";\n"]) :- nonvar(A).
+type_to_var(A:[list,number],["array[int] of var float:",A,";\n"]) :- nonvar(A).
+type_to_var(A:Type,[]) :- writeln('matching other pattern'),(nonvar(A),writeln(A:Type);var(A),writeln(A:Type)).
+
+to_minizinc(Term,Output) :-
+	type_inference(Term:Type,Types),writeln(Types),prolog_to_minizinc(Term,C),term_variables(C,Vars),writeln(Term),
+	
+	vars_to_digits(0,Vars),types_to_vars(Types,Types1),C_=[Types1,"constraint ",C,";"],append_all(C_,C1),atom_chars(Output,C1).
 
 vars_to_digits(_,[]).
 vars_to_digits(Index,[Var1|Vars]) :-
@@ -69,7 +88,7 @@ prolog_to_minizinc(T,Output) :-
 prolog_to_minizinc(T,Output) :-
 	matches_to_outputs([
 		[[(A;B)],[A1,"\\/",B1]],
-		[[length(A,B)],["length(",A1,"==",B1,")"]],
+		[[length(A,B)],["(length(",A1,") == ",B1,")"]],
 		[[(A,B)],["(",A1,"/\\",B1,")"]],
 		[[(A+B)],["(",A1,"+",B1,")"]],
 		[[(A/B)],["(",A1,"/",B1,")"]],
