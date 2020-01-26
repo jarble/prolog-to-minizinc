@@ -2,7 +2,7 @@
 :- set_prolog_flag('double_quotes','chars').
 :- use_module(library(clpfd)).
 
-main :- to_minizinc((B2 = B1 * (1.0 + I) - R,M is Z**2),Output),writeln(Output).
+main :- to_minizinc((length(L1,2),append(L1,L2,L3),B2 = B1 * (1.0 + I) - R,M is Z**2),Output),writeln(Output).
 
 to_minizinc(Term,Output) :- prolog_to_minizinc(Term,C),term_variables(C,Vars),vars_to_digits(0,Vars),C_=["constraint ",C,";"],append_all(C_,C1),atom_chars(Output,C1).
 
@@ -44,6 +44,14 @@ matches_to_outputs([Patterns|Patterns1],T,Output) :-
 
 prolog_to_minizinc(T,Output) :-
 	matches_to_outputs([
+		[[append(A,B,C)],["(",A1,"++",B1,"==",C1,")"]]
+	],T,Output),
+	prolog_to_minizinc(A,A1),
+	prolog_to_minizinc(B,B1),
+	prolog_to_minizinc(C,C1).
+
+prolog_to_minizinc(T,Output) :-
+	matches_to_outputs([
 		[[sin(A)],["sin(",A1,")"]],
 		[[cos(A)],["cos(",A1,")"]],
 		[[tan(A)],["tan(",A1,")"]],
@@ -61,6 +69,7 @@ prolog_to_minizinc(T,Output) :-
 prolog_to_minizinc(T,Output) :-
 	matches_to_outputs([
 		[[(A;B)],[A1,"\\/",B1]],
+		[[length(A,B)],["length(",A1,"==",B1,")"]],
 		[[(A,B)],["(",A1,"/\\",B1,")"]],
 		[[(A+B)],["(",A1,"+",B1,")"]],
 		[[(A/B)],["(",A1,"/",B1,")"]],
@@ -74,7 +83,7 @@ prolog_to_minizinc(T,Output) :-
 		[[(A->B)],["(",A1,"->",B1,")"]],
 		[[member(A,B),memberchk(A1,B1)],["(",A1," in ",B1,")"]],
 		[[forall(A,B)],["forall(",A1,")(",B1,")"]],
-		[[A==B,A=B,A is B],["(",A1," is ",B1,")"]]
+		[[A==B,A=B,A is B],["(",A1," == ",B1,")"]]
 	],T,Output),
 	prolog_to_minizinc(A,A1),
 	prolog_to_minizinc(B,B1).
