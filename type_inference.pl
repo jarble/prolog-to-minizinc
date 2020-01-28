@@ -1,10 +1,10 @@
 :- module(type_inference, [type_inference/2]).
-:- initialization(main).
+%:- initialization(main).
 :- set_prolog_flag('double_quotes','chars').
 
 type_inference(A,B) :- has_type(A,B).
 
-main :- Term = (B=B*2),has_type(Term:Type,Types),writeln('Term with types to infer:'),writeln(Term),writeln('Types of variables in this term:'),writeln(Types).
+main :- Term = (member(3,A),findall(A,B,C)),has_type(Term:Type,Types),writeln('Term with types to infer:'),writeln(Term),writeln('Types of variables in this term:'),writeln(Types).
 
 greater_than(A,B) :-
 	A > B.
@@ -16,6 +16,15 @@ matches_any_([A|A1],B) :-
 matches_any(A,B) :-
 	nonvar(A),matches_any_(A,B).
 
+matches_types([[Patterns,Types]|Rest],Var,List) :-
+	matches_any(Patterns,Var),
+	has_types(Types,List);
+	nonvar(Rest),matches_types(Rest,Var,List).
+
+has_types([],_).
+has_types([A|A1],B) :-
+	has_type(A,B),has_types(A1,B).
+
 has_type(Var:number,_) :-
 	number(Var).
 
@@ -24,12 +33,11 @@ has_type(Var:[list,_],_) :-
 
 has_type([A|B]:[list,T],List) :-
 	is_list(B),
-	has_type(A:T,List),
-	has_type(B:[list,T],List).
+	has_types([A:T,B:[list,T]],List).
 
 has_type(Var:number,List) :-
 	matches_any([sin(A),cos(A),tan(A),asin(A),acos(A),atan(A),sqrt(A),sinh(A),cosh(A),tanh(A),asinh(A),acosh(A),atanh(A),log(A),log10(A),exp(A)],Var),
-	has_type(A:number,List);
+	has_types([A:number],List);
 	matches_any([pi,e,epsilon,inf],Var).
 
 has_type(Var:atom,_) :-
@@ -38,45 +46,26 @@ has_type(Var:atom,_) :-
 has_type(Var:bool,List) :-
 	Var==true;Var==false;
 	
-	matches_any([maplist(A,B)],Var),
-	has_type(B:[list,_],List),has_type(A:atom,List);
-	
-	matches_any([member(A,B),memberchk(A,B)],Var),
-	has_type(B:[list,T],List),has_type(A:T,List);
-	
-	matches_any([length(A,B)],Var),
-	has_type(A:[list,_],List),has_type(B:number,List);
-	
-	matches_any([append(A,B,C)],Var),
-	has_type(A:T,List),has_type(B:T,List),has_type(C:T,List),T = [list,_];
-	
-	matches_any([(A,B),(A;B),(A->B),forall(A,B)],Var),
-	has_type([A,B]:[list,bool],List);
-
-	matches_any([sort(A,B),msort(A,B)],Var),
-	has_type([A,B]:[list,_],List);
-	
-	matches_any([is_list(A)],Var),
-	has_type(A:[list,_],List);
-	
-	matches_any([(A>B),(A<B),A>=B,A=<B,(A is B)],Var),
-	has_type([A,B]:[list,number],List);
-	
-	matches_any([(A==B),(A=B),(A \= B),(A \== B),dif(A,B)],Var),
-	has_type([A,B]:[list,_],List);
-	
-	matches_any([not(A),\+(A)],Var),
-	has_type(A:bool,List);
-	
-	matches_any([integer(A),float(A),number(A)],Var),
-	has_type(A:number,List);
-	
-	matches_any([atom(A),\+(A)],Var),
-	has_type(A:atom,List).
+	matches_types([
+		[[maplist(A,B)],[A:atom,B:[list,_]]],
+		[[findall(A,B,C)],[[A,C]:[list,[list,T]],B:bool]],
+		[[member(A,B),memberchk(A,B)],[A:T,B:[list,T]]],
+		[[length(A,B)],[[A:[list,_]],B:number]],
+		[[(A,B),(A;B),(A->B),forall(A,B)],[[A,B]:[list,bool]]],
+		[[sort(A,B),msort(A,B)],[[A,B]:[list,_]]],
+		[[is_list(A)],[A:[list,_]]],
+		[[(A>B),(A<B),A>=B,A=<B,(A is B)],[[A,B]:[list,number]]],
+		[[(A==B),(A=B),(A \= B),(A \== B),dif(A,B)],[[A,B]:[list,_]]],
+		[[not(A),\+(A)],[A:bool]],
+		[[integer(A),float(A),number(A)],[A:number]],
+		[[atom(A),\+(A)],[A:atom]],
+		[[append(A,B,C)],[[A,B,C]:[list,[list,_]]]]
+		
+	],Var,List).
 
 has_type(Var:number,List) :-
 	matches_any([(A+B),(A-B),(A1*B),(A/B),A**B],Var),
-	has_type([A,B]:[list,number],List).
+	has_types([[A,B]:[list,number]],List).
 	
 has_type(Vars,List) :-
 	var(List),List=[_|_],has_type(Vars,List).

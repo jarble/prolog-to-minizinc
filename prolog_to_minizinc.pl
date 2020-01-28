@@ -2,7 +2,7 @@
 :- set_prolog_flag('double_quotes','chars').
 :- use_module(type_inference).
 
-main :- to_minizinc((B=B*2,length(L1,Z3),member(3,L1)), Output),
+main :- to_minizinc((member(3,A),append(A,B,C),member(3,B)), Output),
 		writeln(Output),
 		open('output.mzn',write,Stream),
         write(Stream,Output),
@@ -59,11 +59,15 @@ matches_to_outputs([Patterns|Patterns1],T,Output) :-
 	Patterns = [Pattern1,Pattern2],
 	matches_any(Pattern1,T),
 	Pattern2=Output;
+	
+	nonvar(Patterns1),
 	matches_to_outputs(Patterns1,T,Output).
 
 prolog_to_minizinc(T,Output) :-
 	matches_to_outputs([
-		[[append(A,B,C)],["(",A1,"++",B1,"==",C1,")"]]
+		[[append(A,B,C)],["(",A1,"++",B1,"==",C1,")"]],
+		[[nth1(A,B,C)],["(",B,"[",A,"] == ",C,")"]],
+		[[nth0(A,B,C)],["(",B,"[",A,"+1] == ",C,")"]]
 	],T,Output),
 	prolog_to_minizinc(A,A1),
 	prolog_to_minizinc(B,B1),
@@ -81,7 +85,8 @@ prolog_to_minizinc(T,Output) :-
 		[[A**B],["pow(",A1,",",B1,")"]],
 		[[sqrt(A)],["sqrt(",A1,")"]],
 		[[log(A)],["ln(",A1,")"]],
-		[[abs(A)],["abs(",A1,")"]]
+		[[abs(A)],["abs(",A1,")"]],
+		[[number(A),float(A),rational(A),is_list(A),var(A),integer(A)],[]]
 	],T,Output),
 	prolog_to_minizinc(A,A1).
 
@@ -102,7 +107,8 @@ prolog_to_minizinc(T,Output) :-
 		[[(A->B)],["(",A1,"->",B1,")"]],
 		[[member(A,B),memberchk(A1,B1)],["(",A1," in ",B1,")"]],
 		[[forall(A,B)],["forall(",A1,")(",B1,")"]],
-		[[A==B,A=B,A is B],["(",A1," == ",B1,")"]]
+		[[A==B,A=B,A is B],["(",A1," == ",B1,")"]],
+		[[findall(A,B,C)],["(",C," == [",A,"|",B,"])"]]
 	],T,Output),
 	prolog_to_minizinc(A,A1),
 	prolog_to_minizinc(B,B1).
