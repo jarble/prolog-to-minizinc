@@ -1,5 +1,5 @@
 # prolog-to-minizinc
-This compiler translates a subset of Prolog to MiniZinc. It's still a work-in-progress.
+This compiler translates a subset of Prolog to [MiniZinc](https://www.minizinc.org/). It's still a work-in-progress.
 
 For example, this Prolog term can be translated to MiniZinc:
 
