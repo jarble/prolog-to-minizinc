@@ -2,7 +2,7 @@
 :- set_prolog_flag('double_quotes','chars').
 :- use_module(type_inference).
 
-main :- to_minizinc((member(3,A),append(A,B,C),member(3,B)), Output),
+main :- to_minizinc((Z=[1.0,2.0],length(Z,2),length(Z,L),length(T,L),foreach(memberchk(A,Z),A=3.0)), Output),
 		writeln(Output),
 		open('output.mzn',write,Stream),
         write(Stream,Output),
@@ -15,9 +15,12 @@ types_to_vars([(Var:Type)|Rest],[Var1|Rest1]) :-
 	type_to_var(Var:Type,Var1),
 	types_to_vars(Rest,Rest1).
 
-type_to_var(A:bool,["var bool:",A,";\n"]) :- nonvar(A).
-type_to_var(A:number,["var float:",A,";\n"]) :- nonvar(A).
-type_to_var(A:[list,number],["array[int] of var float:",A,";\n"]) :- nonvar(A).
+type(bool,"bool").
+type(number,"float").
+type(int,"int").
+
+type_to_var(A:T,["var ",Type,":",A,";\n"]) :- type(T,Type),nonvar(A).
+type_to_var(A:[list,Length,T],["array[",L,"] of var ",Type,":",A,";\n"]) :- type(T,Type),nonvar(A),(var(Length),L="int";nonvar(Length),number_chars(Length,Length1),L=["1..",Length1]).
 type_to_var(A:Type,[]) :- writeln('matching other pattern'),(nonvar(A),writeln(A:Type);var(A),writeln(A:Type)).
 
 to_minizinc(Term,Output) :-
@@ -63,17 +66,31 @@ matches_to_outputs([Patterns|Patterns1],T,Output) :-
 	nonvar(Patterns1),
 	matches_to_outputs(Patterns1,T,Output).
 
+list_to_minizinc([],[]).
+list_to_minizinc([L|Rest],[Next|Output1]) :-
+	prolog_to_minizinc(L,L1),
+	(Rest == [],Next=[L1];
+	length(Rest,Length),Length>0,Next=[L1,","]),
+	list_to_minizinc(Rest,Output1).
+
+prolog_to_minizinc(T,["[",T1,"]"]) :-
+	list_to_minizinc(T,T1).
+
 prolog_to_minizinc(T,Output) :-
 	matches_to_outputs([
+		[[true],["true"]],
+		[[false],["false"]]
+	],T,Output);
+	
+	matches_to_outputs([
 		[[append(A,B,C)],["(",A1,"++",B1,"==",C1,")"]],
-		[[nth1(A,B,C)],["(",B,"[",A,"] == ",C,")"]],
-		[[nth0(A,B,C)],["(",B,"[",A,"+1] == ",C,")"]]
+		[[nth1(A,B,C)],["(",B1,"[",A1,"] == ",C1,")"]],
+		[[nth0(A,B,C)],["(",B1,"[",A1,"+1] == ",C1,")"]]
 	],T,Output),
 	prolog_to_minizinc(A,A1),
 	prolog_to_minizinc(B,B1),
-	prolog_to_minizinc(C,C1).
-
-prolog_to_minizinc(T,Output) :-
+	prolog_to_minizinc(C,C1);
+	
 	matches_to_outputs([
 		[[sin(A)],["sin(",A1,")"]],
 		[[cos(A)],["cos(",A1,")"]],
@@ -87,10 +104,8 @@ prolog_to_minizinc(T,Output) :-
 		[[log(A)],["ln(",A1,")"]],
 		[[abs(A)],["abs(",A1,")"]],
 		[[number(A),float(A),rational(A),is_list(A),var(A),integer(A)],[]]
-	],T,Output),
-	prolog_to_minizinc(A,A1).
-
-prolog_to_minizinc(T,Output) :-
+	],T,Output);
+	
 	matches_to_outputs([
 		[[(A;B)],[A1,"\\/",B1]],
 		[[length(A,B)],["(length(",A1,") == ",B1,")"]],
@@ -106,7 +121,7 @@ prolog_to_minizinc(T,Output) :-
 		[[(A*B)],["(",A1,"*",B1,")"]],
 		[[(A->B)],["(",A1,"->",B1,")"]],
 		[[member(A,B),memberchk(A1,B1)],["(",A1," in ",B1,")"]],
-		[[forall(A,B)],["forall(",A1,")(",B1,")"]],
+		[[forall(A,B),foreach(A,B)],["forall(",A1,")(",B1,")"]],
 		[[A==B,A=B,A is B],["(",A1," == ",B1,")"]],
 		[[findall(A,B,C)],["(",C," == [",A,"|",B,"])"]]
 	],T,Output),
