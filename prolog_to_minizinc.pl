@@ -1,13 +1,7 @@
-:- initialization(main).
+:- module(prolog_to_minizinc, [to_minizinc/2]).
 :- set_prolog_flag('double_quotes','chars').
 :- use_module(type_inference).
-
-main :- to_minizinc((Z=[1.0,2.0],length(Z,2),length(Z,L),length(T,L),foreach(memberchk(A,Z),A=3.0)), Output),
-		writeln(Output),
-		open('output.mzn',write,Stream),
-        write(Stream,Output),
-        nl(Stream),
-        close(Stream).
+:- use_module(partial_evaluation).
 
 types_to_vars([A],[]) :-
 	var(A).
@@ -23,7 +17,8 @@ type_to_var(A:T,["var ",Type,":",A,";\n"]) :- type(T,Type),nonvar(A).
 type_to_var(A:[list,Length,T],["array[",L,"] of var ",Type,":",A,";\n"]) :- type(T,Type),nonvar(A),(var(Length),L="int";nonvar(Length),number_chars(Length,Length1),L=["1..",Length1]).
 type_to_var(A:Type,[]) :- writeln('matching other pattern'),(nonvar(A),writeln(A:Type);var(A),writeln(A:Type)).
 
-to_minizinc(Term,Output) :-
+to_minizinc(Term0,Output) :-
+	find_all_clauses(Term0,Term),
 	type_inference(Term:Type,Types),writeln(Types),prolog_to_minizinc(Term,C),term_variables(C,Vars),writeln(Term),
 	
 	vars_to_digits(0,Vars),types_to_vars(Types,Types1),C_=[Types1,"constraint ",C,";"],append_all(C_,C1),atom_chars(Output,C1).
@@ -35,17 +30,12 @@ vars_to_digits(Index,[Var1|Vars]) :-
 	Index1 is Index + 1,
 	vars_to_digits(Index1,Vars).
 
-unify_if_match(A,B) :-
-	subsumes_term(A,B),A=B.
-
 matches_any_([],B) :- false.
 matches_any_([A|A1],B) :-
 	subsumes_term(A,B),A=B;matches_any_(A1,B).
 
 matches_any(A,B) :-
 	nonvar(A),matches_any_(A,B).
-
-
 
 append_all(A,A) :- var(A).
 append_all([],[]).
@@ -62,7 +52,6 @@ matches_to_outputs([Patterns|Patterns1],T,Output) :-
 	Patterns = [Pattern1,Pattern2],
 	matches_any(Pattern1,T),
 	Pattern2=Output;
-	
 	nonvar(Patterns1),
 	matches_to_outputs(Patterns1,T,Output).
 
@@ -104,7 +93,8 @@ prolog_to_minizinc(T,Output) :-
 		[[log(A)],["ln(",A1,")"]],
 		[[abs(A)],["abs(",A1,")"]],
 		[[number(A),float(A),rational(A),is_list(A),var(A),integer(A)],[]]
-	],T,Output);
+	],T,Output),
+	prolog_to_minizinc(A,A1);
 	
 	matches_to_outputs([
 		[[(A;B)],[A1,"\\/",B1]],
