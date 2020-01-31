@@ -15,3 +15,5 @@ This is the compiler's output:
     array[1..2] of var bool:A1;
     var float:A2;
     constraint ((A0 == [1.0,2.0])/\((length(A0) == 2)/\((length(A0) == 2)/\((length(A1) == 2)/\forall((A2 in A0))((A2 == 3.0))))));
+
+A demo of this compiler can be found in [test.pl](https://github.com/jarble/prolog-to-minizinc/blob/master/test.pl).
