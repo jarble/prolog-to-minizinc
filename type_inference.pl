@@ -1,4 +1,5 @@
 :- module(type_inference, [type_inference/2]).
+:- use_module(library(clpfd)).
 %:- initialization(main).
 :- set_prolog_flag('double_quotes','chars').
 
@@ -25,16 +26,20 @@ has_types([],_).
 has_types([A|A1],B) :-
 	has_type(A,B),has_types(A1,B).
 
+list_or_set(Type) :- Type=list;Type=set.
+
 has_type(Var:number,_) :-
 	float(Var).
 
 has_type(Var:int,_) :-
 	integer(Var).
 
-has_type(Var:[list,_,_],_) :-
+has_type(Var:[T,_,_],_) :-
+	list_or_set(T),
 	Var == [].
 
-has_type([A|B]:[list,_,T],List) :-
+has_type([A|B]:[List_or_set,_,T],List) :-
+	list_or_set(List_or_set),
 	is_list(B),
 	has_types([A:T,B:[list,_,T]],List).
 
@@ -43,20 +48,28 @@ has_type(Var:number,List) :-
 	has_types([A:number],List);
 	matches_any([pi,e,epsilon,inf],Var).
 
-has_type(Var:int,List) :-
+has_type(Var:Type,List) :-
 	matches_any([abs(A)],Var),
-	has_types([A:int],List).
+	has_types([A:Type],List),
+	(Type=int;Type=number).
 
 has_type(Var:atom,_) :-
 	atomic(Var),dif(Var,true),dif(Var,false).
 
 has_type(Var:bool,List) :-
-	Var==true;Var==false;
+	Var==true;
+	Var==false;
 	
+	(Type=int;Type=number),
+	matches_types([
+		[[sum_list(A,B),max_list(A,B),min_list(A,B)],[A:[list,_,Type],B:Type]]
+	],Var,List);
+	
+	list_or_set(List_or_set),
 	matches_types([
 		[[maplist(A,B)],[A:atom,B:[list,_,_]]],
 		[[findall(A,B,C)],[[A,C]:[list,_,[list,_,T]],B:bool]],
-		[[member(A,B),memberchk(A,B)],[A:T,B:[list,_,T]]],
+		[[member(A,B),memberchk(A,B)],[A:T,B:[List_or_set,_,T]]],
 		[[length(A,B)],[[A:[list,B,_]],B:number]],
 		[[(A,B),(A;B),(A->B),forall(A,B),foreach(A,B)],[[A,B]:[list,_,bool]]],
 		[[sort(A,B),msort(A,B)],[[A,B]:[list,_,_]]],
@@ -66,9 +79,17 @@ has_type(Var:bool,List) :-
 		[[not(A),\+(A)],[A:bool]],
 		[[integer(A),float(A),number(A)],[A:number]],
 		[[atom(A),\+(A)],[A:atom]],
-		[[append(A,B,C)],[[A,B,C]:[list,_,[list,_,_]]]],
-		[[nth0(Index,List1,Elem),nth1(Index,List1,Elem)],[Elem:T,List1:[list,_,T],Index:int]]
+		[[union(A,B,C),intersection(A,B,C)],[A:[set,_,Type],B:[set,_,Type],C:[set,_,Type]]],
+		[[subset(A,B)],[[A,B]:[list,_,[set,_,_]]]],
+		[[is_set(A)],[A:[set,_,_]]],
+		[[nth0(Index,List1,Elem),nth1(Index,List1,Elem)],[Elem:T,List1:[list,_,T],Index:int]],
+		[[all_different(A),all_distinct(A)],[A:[list,_,int]]]
 	],Var,List);
+	T3 #= T1 + T2,T1 #> 0,T2 #> 0,T3 #> 0,
+	matches_types([
+		[[append(A,B,C)],[A:[list,T1,Type],B:[list,T2,Type],C:[list,T3,Type]]]
+	],Var,List)
+	;
 	
 	matches_any([length(A,B)],Var),
 	has_types([A:[list,B,_],B:int],List).

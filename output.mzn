@@ -1,5 +1,4 @@
-array[1..2] of var float:A0;
-array[1..2] of var bool:A1;
-var float:A2;
-var float:A3;
-constraint ((A0 == [1.0,2.0])/\((length(A0) == 2)/\((length(A0) == 2)/\((length(A1) == 2)/\forall((A2 in A0))(((1.0<=A3)/\(A3<=3.0)))))));
+array[1..2] of var int:A0;
+array[1..5] of var int:A1;
+array[1..3] of var int:A2;
+constraint ((1 in A0)/\((length(A1) == 5)/\(alldifferent(A1)/\((length(A0) == 2)/\(A0++A2==A1)))));

@@ -9,6 +9,6 @@ main :- to_minizinc(demo, Output),
         close(Stream).
 
 demo :-
-	Z=[1.0,2.0],length(Z,2),length(Z,L),length(T,L),foreach(memberchk(A,Z),is_between(1.0,A,3.0)).
+	member(1,A),length(C,5),all_different(C),length(A,2),append(A,B,C).
 
 is_between(A,B,C) :- A=<B,B=<C.

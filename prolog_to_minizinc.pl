@@ -2,6 +2,8 @@
 :- set_prolog_flag('double_quotes','chars').
 :- use_module(type_inference).
 :- use_module(partial_evaluation).
+:- use_module(library(clpfd)).
+
 
 types_to_vars([A],[]) :-
 	var(A).
@@ -19,6 +21,7 @@ type_to_var(A:Type,[]) :- writeln('matching other pattern'),(nonvar(A),writeln(A
 
 to_minizinc(Term0,Output) :-
 	find_all_clauses(Term0,Term),
+	writeln(Term),
 	type_inference(Term:Type,Types),writeln(Types),prolog_to_minizinc(Term,C),term_variables(C,Vars),writeln(Term),
 	
 	vars_to_digits(0,Vars),types_to_vars(Types,Types1),C_=[Types1,"constraint ",C,";"],append_all(C_,C1),atom_chars(Output,C1).
@@ -74,13 +77,16 @@ prolog_to_minizinc(T,Output) :-
 	matches_to_outputs([
 		[[append(A,B,C)],["(",A1,"++",B1,"==",C1,")"]],
 		[[nth1(A,B,C)],["(",B1,"[",A1,"] == ",C1,")"]],
-		[[nth0(A,B,C)],["(",B1,"[",A1,"+1] == ",C1,")"]]
+		[[nth0(A,B,C)],["(",B1,"[",A1,"+1] == ",C1,")"]],
+		[[union(A,B,C)],[("(",C1, "== ",A1," union ",B1,")")]],
+		[[intersection(A,B,C)],[("(",C1, "== ",A1," intersection ",B1,")")]]
 	],T,Output),
 	prolog_to_minizinc(A,A1),
 	prolog_to_minizinc(B,B1),
 	prolog_to_minizinc(C,C1);
 	
 	matches_to_outputs([
+		[[var(A),nonvar(A)],[A1]],
 		[[sin(A)],["sin(",A1,")"]],
 		[[cos(A)],["cos(",A1,")"]],
 		[[tan(A)],["tan(",A1,")"]],
@@ -92,10 +98,11 @@ prolog_to_minizinc(T,Output) :-
 		[[sqrt(A)],["sqrt(",A1,")"]],
 		[[log(A)],["ln(",A1,")"]],
 		[[abs(A)],["abs(",A1,")"]],
-		[[number(A),float(A),rational(A),is_list(A),var(A),integer(A)],[]]
+		[[all_distinct(A),all_different(A)],["alldifferent(",A1,")"]],
+		[[number(A),float(A),rational(A),is_list(A),var(A),integer(A1)],[]]
 	],T,Output),
 	prolog_to_minizinc(A,A1);
-	
+		
 	matches_to_outputs([
 		[[(A;B)],[A1,"\\/",B1]],
 		[[length(A,B)],["(length(",A1,") == ",B1,")"]],
@@ -106,14 +113,18 @@ prolog_to_minizinc(T,Output) :-
 		[[(A<B)],["(",A1,"<",B1,")"]],
 		[[(A>=B)],["(",A1,">=",B1,")"]],
 		[[(A=<B)],["(",A1,"<=",B1,")"]],
-		[[(A\=B,A\==B)],["(",A1,"!=",B1,")"]],
+		[[A\=B,A\==B],["(",A1,"!=",B1,")"]],
 		[[(A-B)],["(",A1,"-",B1,")"]],
 		[[(A*B)],["(",A1,"*",B1,")"]],
 		[[(A->B)],["(",A1,"->",B1,")"]],
 		[[member(A,B),memberchk(A1,B1)],["(",A1," in ",B1,")"]],
 		[[forall(A,B),foreach(A,B)],["forall(",A1,")(",B1,")"]],
 		[[A==B,A=B,A is B],["(",A1," == ",B1,")"]],
-		[[findall(A,B,C)],["(",C," == [",A,"|",B,"])"]]
+		[[findall(A,B,C)],["(",C1," == [",A1,"|",B1,"])"]],
+		[[max_list(A,B)],["(",B1,"==max(",A1,"))"]],
+		[[min_list(A,B)],["(",B1,"==min(",A1,"))"]],
+		[[subset(A,B)],["(",A," subset ",A,")"]],
+		[[not(A),\+(A)],["not(",A1,")"]]
 	],T,Output),
 	prolog_to_minizinc(A,A1),
 	prolog_to_minizinc(B,B1).
