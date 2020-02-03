@@ -26,7 +26,7 @@ has_types([],_).
 has_types([A|A1],B) :-
 	has_type(A,B),has_types(A1,B).
 
-list_or_set(Type) :- Type=list;Type=set.
+list_or_set(Type) :- Type = list;Type = set.
 
 has_type(Var:number,_) :-
 	float(Var).
@@ -51,16 +51,16 @@ has_type(Var:number,List) :-
 has_type(Var:Type,List) :-
 	matches_any([abs(A)],Var),
 	has_types([A:Type],List),
-	(Type=int;Type=number).
+	(Type = int;Type = number).
 
 has_type(Var:atom,_) :-
-	atomic(Var),dif(Var,true),dif(Var,false).
+	atomic(Var),dif(Var,false),dif(Var,true).
 
 has_type(Var:bool,List) :-
-	Var==true;
 	Var==false;
+	Var==true;
 	
-	(Type=int;Type=number),
+	(Type = int;Type = number),
 	matches_types([
 		[[sum_list(A,B),max_list(A,B),min_list(A,B)],[A:[list,_,Type],B:Type]]
 	],Var,List);
@@ -71,11 +71,11 @@ has_type(Var:bool,List) :-
 		[[findall(A,B,C)],[[A,C]:[list,_,[list,_,T]],B:bool]],
 		[[member(A,B),memberchk(A,B)],[A:T,B:[List_or_set,_,T]]],
 		[[length(A,B)],[[A:[list,B,_]],B:number]],
-		[[(A,B),(A;B),(A->B),forall(A,B),foreach(A,B)],[[A,B]:[list,_,bool]]],
+		[[(A,B),(A;B),(A->B),foreach(A,B),forall(A,B)],[[A,B]:[list,_,bool]]],
 		[[sort(A,B),msort(A,B)],[[A,B]:[list,_,_]]],
 		[[is_list(A)],[A:[list,_,_]]],
 		[[(A>B),(A<B),A>=B,A=<B,(A is B)],[[A,B]:[list,_,number]]],
-		[[(A==B),(A=B),(A \= B),(A \== B),dif(A,B)],[[A,B]:[list,_,_]]],
+		[[(A==B),(A = B),(A \= B),(A \== B),dif(A,B)],[[A,B]:[list,_,_]]],
 		[[not(A),\+(A)],[A:bool]],
 		[[integer(A),float(A),number(A)],[A:number]],
 		[[atom(A),\+(A)],[A:atom]],
@@ -104,5 +104,5 @@ has_type(Vars,List) :-
 has_type(Var:Type,[Var1|Rest]) :-
 	var(Var),
 		(Var:Type == Var1;var(Var),var(Var1),(Var:Type) = Var1;
-		nonvar(Var1),Var1=V1:T1,(V1==Var,Type=T1;
+		nonvar(Var1),Var1 = V1:T1,(V1==Var,Type = T1;
 		dif(V1, Var),has_type(Var:Type,Rest))).
