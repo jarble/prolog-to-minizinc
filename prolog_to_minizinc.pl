@@ -16,16 +16,18 @@ type(number,"float").
 type(int,"int").
 
 remove_var([]).
-remove_var([Loop_vars|Rest]) :-
-	nonvar(Rest),remove_var(Rest);
-	var(Rest),Rest=[].
+remove_var([Loop_var|Rest]) :-
+	var(Loop_var),Loop_var=[],Rest=[];
+	
+	nonvar(Loop_var),(nonvar(Rest),remove_var(Rest);
+	var(Rest),Rest=[]).
 
 not_loop_var(Var, Loop_vars) :-
-	remove_var(Loop_vars),
+	writeln(['loop vars',Loop_vars]),
 	not(member(loop_var(Var),Loop_vars)).
 
 type_to_var(A:T,["var ",Type,":",A,";\n"],Loop_vars) :- not_loop_var(A,Loop_vars),type(T,Type),nonvar(A).
-type_to_var(A:[list,Length,T],["array[",L,"] of var ",Type,":",A,";\n"],Loop_vars) :- not_loop_var(A,Loop_vars),type(T,Type),nonvar(A),(var(Length),L="int";nonvar(Length),number_chars(Length,Length1),L=["1..",Length1]).
+type_to_var(A:[list,Length,T],["array[",L,"] of var ",Type,":",A,";\n"],Loop_vars) :- not_loop_var(A,Loop_vars),type(T,Type),nonvar(A),(var(Length),L="int";nonvar(Length),number(Length),number_chars(Length,Length1),L=["1..",Length1]).
 type_to_var(A:Type,[],Loop_vars) :- writeln('matching other pattern'),(member(loop_var(A),Loop_vars);nonvar(A),writeln(A:Type);var(A),writeln(A:Type)).
 
 to_minizinc(Term0,Output) :-
@@ -33,7 +35,7 @@ to_minizinc(Term0,Output) :-
 	writeln(['partial_evaluation',Term]),
 	type_inference:type_inference(Term:Type,Types),writeln(Types),Loop_vars=[_|_],prolog_to_minizinc(Term,C,Loop_vars),writeln(['loop variables: ',Loop_vars]),term_variables(C,Vars),writeln(Term),
 	
-	vars_to_digits(0,Vars),types_to_vars(Types,Types1,Loop_vars),C_=[Types1,"constraint ",C,";"],append_all(C_,C1),atom_chars(Output,C1).
+	vars_to_digits(0,Vars),remove_var(Loop_vars),types_to_vars(Types,Types1,Loop_vars),C_=[Types1,"constraint ",C,";"],append_all(C_,C1),atom_chars(Output,C1).
 
 vars_to_digits(_,[]).
 vars_to_digits(Index,[Var1|Vars]) :-

@@ -62,7 +62,8 @@ has_type(Var:bool,List) :-
 	
 	(Type = int;Type = number),
 	matches_types([
-		[[sum_list(A,B),max_list(A,B),min_list(A,B)],[A:[list,_,Type],B:Type]]
+		[[sum_list(A,B),max_list(A,B),min_list(A,B)],[A:[list,_,Type],B:Type]],
+		[[(A>B),(A<B),A>=B,A=<B,(A is B)],[[A,B]:[list,_,Type]]]
 	],Var,List);
 	
 	list_or_set(List_or_set),
@@ -74,7 +75,6 @@ has_type(Var:bool,List) :-
 		[[(A,B),(A;B),(A->B),foreach(A,B),forall(A,B)],[[A,B]:[list,_,bool]]],
 		[[sort(A,B),msort(A,B)],[[A,B]:[list,_,_]]],
 		[[is_list(A)],[A:[list,_,_]]],
-		[[(A>B),(A<B),A>=B,A=<B,(A is B)],[[A,B]:[list,_,number]]],
 		[[(A==B),(A = B),(A \= B),(A \== B),dif(A,B)],[[A,B]:[list,_,_]]],
 		[[not(A),\+(A)],[A:bool]],
 		[[integer(A),float(A),number(A)],[A:number]],
