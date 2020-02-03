@@ -1,13 +1,14 @@
 # prolog-to-minizinc
 This compiler translates a subset of Prolog to [MiniZinc](https://www.minizinc.org/). It's still a work-in-progress.
 
-For example, this Prolog term can be translated to MiniZinc:
+For example, this predicate can be translated to MiniZinc:
 
-    (Z=[1.0,2.0],
-    length(Z,2),
-    length(Z,L),
-    length(T,L),
-    foreach(memberchk(A,Z),A=3.0))
+    main :- 
+        (Z=[1.0,2.0],
+        length(Z,2),
+        length(Z,L),
+        length(T,L),
+        foreach(memberchk(A,Z),A=3.0))
 
 This is the compiler's output:
 
